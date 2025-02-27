@@ -1,0 +1,6 @@
+senders:
+  - "123"
+receivers:
+  - "xab"
+amounts:
+  - 1000000

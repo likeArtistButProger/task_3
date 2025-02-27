@@ -1,0 +1,17 @@
+[package]
+name = "task_3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.96"
+clap = { version = "4.5.31", features = ["derive"]}
+futures = "0.3.31"
+maplit = "1.0.2"
+serde = { version = "1.0.218", features = ["derive"]}
+serde_yaml = "0.9.34"
+tokio = { version = "1", features = ["full"] }
+yellowstone-grpc-client = "5.0.0"
+yellowstone-grpc-proto = { version = "5.0.0", features = ["plugin"]}
+solana-client = "2.1.0"
+solana-sdk = "2.1.1"
