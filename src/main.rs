@@ -1,9 +1,11 @@
 use clap::Parser;
 use serde::Deserialize;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction, transaction::Transaction};
+use solana_sdk::{commitment_config::CommitmentLevel, pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction, transaction::Transaction};
 use yellowstone_grpc_client::{ClientTlsConfig, GeyserGrpcClient};
-use std::{fs, str::FromStr};
+use yellowstone_grpc_proto::geyser::SubscribeRequestFilterBlocksMeta;
+use std::{collections::HashMap, fs, str::FromStr};
+use maplit::hashmap;
 use {
     futures::{sink::SinkExt, stream::StreamExt},
     yellowstone_grpc_proto::prelude::{
@@ -44,13 +46,24 @@ async fn main() -> anyhow::Result<()> {
 
     subscribe_tx
         .send(SubscribeRequest {
-            ..Default::default()
+            slots: HashMap::new(),
+            accounts: HashMap::new(),
+            transactions: HashMap::new(),
+            transactions_status: HashMap::new(),
+            entry: HashMap::new(),
+            blocks: HashMap::new(),
+            blocks_meta: hashmap! { "".to_owned() => SubscribeRequestFilterBlocksMeta {} },
+            commitment: Some(CommitmentLevel::Processed as i32),
+            accounts_data_slice: vec![],
+            ping: None,
+            from_slot: None,
         })
         .await?;
+    
 
     while let Some(message) = stream.next().await {
         match message?.update_oneof {
-            Some(UpdateOneof::Block(block)) => {
+            Some(UpdateOneof::BlockMeta(block)) => {
                 println!("New block detected: {}", block.block_height.unwrap().block_height);
 
                 send_transactions(&solana_client, &config).await?;
