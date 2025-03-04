@@ -12,6 +12,7 @@ use {
         subscribe_update::UpdateOneof, SubscribeRequest
     },
 };
+use solana_sdk::hash::Hash;
 
 #[derive(Deserialize)]
 struct Config {
@@ -32,7 +33,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let solana_client = RpcClient::new(String::from(""));
+    let solana_client = RpcClient::new(String::from("https://api.devnet.solana.com"));
     let config: Config = serde_yaml::from_str(&fs::read_to_string("config.yaml").expect("Failed to read config.yaml")).expect("Invalid config format");
 
     let args = Args::parse();
@@ -65,8 +66,9 @@ async fn main() -> anyhow::Result<()> {
         match message?.update_oneof {
             Some(UpdateOneof::BlockMeta(block)) => {
                 println!("New block detected: {}", block.block_height.unwrap().block_height);
+                let blockhash = solana_client.get_latest_blockhash().await?;
 
-                send_transactions(&solana_client, &config).await?;
+                send_transactions(&solana_client, &config, blockhash).await?;
             }
             _ => {},
         }
@@ -76,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn send_transactions(client: &RpcClient, config: &Config) -> anyhow::Result<()> {
+async fn send_transactions(client: &RpcClient, config: &Config, recent_blockhash: Hash) -> anyhow::Result<()> {
     for ((sender_private_key, receiver_address), amount) in
         config.senders.iter().zip(&config.receivers).zip(&config.amounts)
     {
@@ -96,7 +98,7 @@ async fn send_transactions(client: &RpcClient, config: &Config) -> anyhow::Resul
             &[transfer_instruction],
             Some(&sender_keypair.pubkey()),
             &[&sender_keypair],
-            solana_sdk::hash::Hash::new_unique(),
+            recent_blockhash,
         );
         
         match client.send_and_confirm_transaction(&transaction).await {
